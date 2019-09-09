@@ -1,0 +1,121 @@
+<html>
+    <head>
+        <title>WEBGL TEST</title>
+        <meta charset="utf-8">
+    </head>
+
+    <body>
+		<div id="webgl" style="width:800px;height:600px;"></div>
+		
+		<script src="./lib/webgl-utils.js"></script>
+		<script src="./lib/webgl-debug.js"></script>
+		<script src="./lib/cuon-utils.js"></script>
+		<script src="./lib/cuon-matrix.js"></script>
+
+		<script>
+			var VSHADER_SOURCE = `
+				attribute vec4 a_Position ;
+				uniform mat4 modelMatrix;
+				void main() {
+					gl_Position = modelMatrix * a_Position;
+				}
+			`;
+
+			var FSHADER_SOURCE = `
+				void main() {
+					gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+
+				}
+			`;
+		</script>
+
+		<script>
+			function initVertexBuffers(gl){
+				var vertices = new Float32Array([
+					0,0.5, -0.5,-0.5, 0.5,-0.5
+				]);
+
+				var n=3;
+
+				var vertexBuffer = gl.createBuffer();
+				if(!vertexBuffer){
+					throw new Error("Faild to create the buffer object")
+					return -1;
+				}
+
+				gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+				gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+
+				var a_Position = gl.getAttribLocation(gl.program,'a_Position');
+				if(gl.getError()){
+					console.log(gl.getError());
+					throw new Error("Faild to get the storage location of a_position")
+					return -1;
+				}
+
+				gl.vertexAttribPointer(a_Position,2,gl.FLOAT,false,0,0);
+
+				gl.enableVertexAttribArray(a_Position);
+
+				return n;
+			}
+
+			function draw(ca,modelMatrix,gl){
+				gl.clear(gl.COLOR_BUFFER_BIT);
+				modelMatrix.setRotate(ca,0,0,1);
+				modelMatrix.translate(0.35,0,0);
+				const u_ModelMatrix = gl.getUniformLocation(gl.program,'modelMatrix');
+				gl.uniformMatrix4fv(u_ModelMatrix,false,modelMatrix.elements);
+				gl.drawArrays(gl.TRIANGLES,0,3)
+			}
+
+			var gl_LAST = Date.now();
+			function currentAngle(){
+				const now = Date.now();
+				let angle = 45 * ((now - gl_LAST)/1000.0);
+				return angle %= 360;
+			}
+		</script>
+
+        <script>
+            var canvas = document.createElement('canvas');
+            canvas.id="webglCanvas";
+            canvas.style.width="100%";
+            canvas.style.height="100%";
+            document.getElementById('webgl').appendChild(canvas);
+
+            var gl = getWebGLContext(canvas);
+
+			if(!initShaders(gl,VSHADER_SOURCE,FSHADER_SOURCE)){
+				console.log("Failed to initialize Shaders!!")
+				throw new Error("Failed to initialize Shaders!!")
+			}
+			
+			var n = initVertexBuffers(gl);
+			console.log(n)
+			if(n < 0){
+				throw new Error("Failed to initialize Shaders!!")
+			}
+			
+			var modelMatrix = new Matrix4();
+			modelMatrix.setRotate(40.0,0,0,1);
+			modelMatrix.translate(0.2,0,0);
+
+			var u_ModelMatrix = gl.getUniformLocation(gl.program,'modelMatrix');
+			gl.uniformMatrix4fv(u_ModelMatrix,false,modelMatrix.elements);
+
+			gl.clearColor(0.0,0.0,0.0,1.0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+
+			// gl.drawArrays(gl.TRIANGLES,0,n);
+			const tick = () => {
+				const ca = currentAngle();
+				draw(ca,modelMatrix,gl);
+				requestAnimationFrame(tick);
+			}
+			tick();
+		</script>
+		
+
+    </body>
+</html>
